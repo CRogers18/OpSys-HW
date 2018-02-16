@@ -95,6 +95,96 @@ void runFCFS(process *procList, int duration, int numProcesses)
 
 }
 
+//sort the process list according to the burst length
+process *sortlistbyburst (process *procList, int numProc)
+{
+    int i = 0;
+    int j = 0;
+
+    procList = sortProcessList(procList, numProcesses);
+
+    //bubble sort the list by burst time except the first occurring process
+    for(i = 1; i < numProc; i++)
+	{
+		for(j = i+1; j < numProc; j++)
+		{
+			if(procList[i].burstTime > procList[j].burstTime)
+			{
+				process temp = procList[i];
+				procList[i] = procList[j];
+				procList[j] = temp;
+			}
+		}
+	}
+
+	return procList;
+}
+
+//implementing the preemptive shortest job first
+void preemshortestjobfirst (process *procList, int duration, int numProcesses)
+{
+    int time = 0;
+    int isDone = 0;
+    int i = 0;
+    int j = 1;
+
+    process *arrivallist = sortProcessList(procList, numProcesses);
+
+    procList = sortlistbyburst(procList, numProcesses);
+
+    process currproc = procList[i];
+
+    while(!isDone)
+    {
+        if(time == duration)
+        {
+            isDone = 1;
+            printf("Finished at time %d\n", time);
+            continue;
+        }
+
+        if(time == arivallist[i].arrivalTime)
+        {
+            printf("Time %d: %s arrived\n", time, currproc.name);
+
+            if(i == 0)
+            {
+                printf("Time %d: %s selected (burst %d)\n", time, currproc.name, currproc.burstTime);
+            }
+
+            i++;
+        }
+
+        if(arivallist[i].arivalTime == procList[j].arivalTime)
+        {
+            printf("Time %d: %s selected (burst %d)\n", time, currproc.name, currproc.burstTime);
+        }
+
+        if(currproc.burstTime == 0)
+        {
+            printf("Time %d: %s finished\n", time, currproc.name);
+
+            if(j > 0 && procList[j-1].burstTime != 0)
+            {
+                j--;
+                currproc = procList[j];
+            }
+            else
+            {
+                j++;
+                currproc = procList[j];
+            }
+        }
+
+        if(i > 0)
+        {
+            currproc.burstTime--;
+        }
+
+        time++;
+    }
+}
+
 int main(int argc, char const *argv[])
 {
 	char inFilename[] = "set1_process.in";
