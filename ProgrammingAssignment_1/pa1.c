@@ -200,7 +200,7 @@ int processesArrived(process *procList, int numProcesses, int time)
 
 void runRR(process *procList, int duration, int numProcesses, int timeQ)
 {
-	int time = 0, isRunning = 0, nextArrival = 0, i = 0, j = 0, k = 0, isDone = 0, lastRun, procArrived;
+	int time = 0, isRunning = 0, nextArrival = 0, i = 0, j = 0, k = 0, isDone = 0, lastRun, procArrived, isFinished = 0;
 	int processTimes[numProcesses];
 	procList = sortTime(procList, numProcesses);
 	process activeProc;
@@ -214,11 +214,17 @@ void runRR(process *procList, int duration, int numProcesses, int timeQ)
 	printf("Time %d: %s arrived\n", time, procList[j].name);
 	j++;
 
-	while(time < duration)
+	while(time < duration && !isFinished)
 	{	
 		// Go for 2 cycles
 		for(i = 0; i < timeQ; i++)
 		{
+			if(activeProc.burstTime == 0 && activeProc.isFinished == 1)
+			{
+				isFinished = 1;
+				break;	
+			}
+
 			if (i == 0)
 				printf("Time %d: %s selected (burst %d)\n", time, activeProc.name, activeProc.burstTime);
 
@@ -230,17 +236,17 @@ void runRR(process *procList, int duration, int numProcesses, int timeQ)
 					j++;
 			}
 
+		//	printf("%d\n", time);
+
 			// If not finished, decrement
-			if(activeProc.burstTime != 0)
+			if(activeProc.burstTime > 0)
 			{
 				activeProc.burstTime--;
-				time++;
 			}
 
 			// If finished, swap out
-			else
+			else if (activeProc.burstTime == 0)
 			{
-				time++;
 				activeProc.isFinished = 1;
 				printf("Time %d: %s finished\n", time, activeProc.name);
 
@@ -259,7 +265,7 @@ void runRR(process *procList, int duration, int numProcesses, int timeQ)
 				{
 					procArrived = processesArrived(procList, numProcesses, time);
 
-					if(procList[k].burstTime != 0 && (procArrived))
+					if(procList[k].burstTime != 0 && (procArrived == 1))
 					{
 						activeProc = procList[k];
 						break;
@@ -277,19 +283,22 @@ void runRR(process *procList, int duration, int numProcesses, int timeQ)
 						isDone++;
 
 						if(isDone > 1)
+						{
+							isDone = 0;
 							break;
+						}
 					}
 				}
 
 				break;
-			}			
-		}
+			}
 
-		isDone = 0;
+			time++;
+		}
 
 		if(time == processTimes[j])
 		{
-			printf("Time %d : %s arrived\n", time, procList[j].name);
+			printf("Time %d: %s arrived\n", time, procList[j].name);
 			
 			if((j + 1) != numProcesses)
 				j++;
@@ -327,17 +336,18 @@ void runRR(process *procList, int duration, int numProcesses, int timeQ)
 				k = 0;
 				isDone++;
 
-				if(isDone > 2)
+				if(isDone > 1)
+				{
+					isDone = 0;
 					break;
+				}
 			}
 		}
-
-		isDone = 0;
 	}
 
 	while (time < duration)
 	{
-		printf("Time %d : IDLE\n", time);
+		printf("Time %d: IDLE\n", time);
 		time++;
 	}
 
