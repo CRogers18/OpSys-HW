@@ -10,6 +10,12 @@ typedef struct process
 	int burstTime, arrivalTime, isFinished, endTime;
 } process;
 
+typedef struct result
+{
+	char *name;
+	int t_time, w_time;
+} result;
+
 void printList(process *procList, int numProc)
 {
 	int i;
@@ -58,15 +64,16 @@ int allProcessesDone(process *procList, int numProcesses)
 	return isFinished;
 }
 
-void runSJF(process *procList, int duration, int numProcesses)
+void runSJF(process *procList, int duration, int numProcesses, process *procListCopy)
 {
-	int time = 0, isRunning = 0, nextArrival = 0, j = 0, i, isDone = 0, bestTime = INT_MAX;
+	int time = 0, isRunning = 0, nextArrival = 0, j = 0, i, k = 0, isDone = 0, bestTime = INT_MAX;
 	int processTimes[numProcesses];
 	procList = sortTime(procList, numProcesses);
 	process activeProc;
 	char outFilename[] = "processes.out";
 	FILE *output;
 	output = fopen(outFilename, "w");
+	result *results = malloc(sizeof(result) * numProcesses);
 
 	// Holds arrival times, sorted already
 	for (i = 0; i < numProcesses; i++)
@@ -85,6 +92,17 @@ void runSJF(process *procList, int duration, int numProcesses)
 		if(activeProc.burstTime == 0)
 		{
 			fprintf(output,"Time %d : %s finished\n", time, activeProc.name);
+			results[k].name = activeProc.name;
+			results[k].t_time = time - activeProc.arrivalTime;
+
+			for(i = 0; i < numProcesses; i++)
+			{
+				if(activeProc.name == procListCopy[i].name)
+					results[k].w_time = results[k].t_time - procListCopy[i].burstTime;
+			}
+
+			k++;
+			
 			activeProc.isFinished = 1;
 
 			for (i = 0; i < numProcesses; i++)
@@ -139,7 +157,12 @@ void runSJF(process *procList, int duration, int numProcesses)
 		time++;
 	}
 
-	fprintf(output,"Finished at time %d\n", time);
+	fprintf(output,"Finished at time %d\n\n", time);
+
+	for(i = 0; i < numProcesses; i++)
+	{
+		fprintf(output, "%s wait %d turnaround %d\n", results[i].name, results[i].w_time, results[i].t_time);
+	}
 }
 
 
@@ -210,19 +233,21 @@ int processesArrived(process *procList, int numProcesses, int time)
 	return arrivalCount;
 }
 
-void runRR(process *procList, int duration, int numProcesses, int timeQ)
+void runRR(process *procList, int duration, int numProcesses, int timeQ, process *procListCopy)
 {
-	int time = 0, isRunning = 0, nextArrival = 0, i = 0, j = 0, k = 0, isDone = 0, lastRun, procArrived, isFinished = 0;
+	int time = 0, isRunning = 0, nextArrival = 0, i = 0, j = 0, k = 0, l = 0, m = 0, isDone = 0, lastRun, procArrived, isFinished = 0;
 	int processTimes[numProcesses];
 	procList = sortTime(procList, numProcesses);
 	process activeProc;
 	char outFilename[] = "processes.out";
 	FILE *output;
 	output = fopen(outFilename, "w");
+	result *results = malloc(sizeof(result) * numProcesses);
+
 	for (i = 0; i < numProcesses; i++)
 		processTimes[i] = procList[i].arrivalTime;
 
-	fprintf(output,"%d processes\nUsing Round-Robin\nQuantum %d\n", numProcesses, timeQ);
+	fprintf(output,"%d processes\nUsing Round-Robin\nQuantum %d\n\n", numProcesses, timeQ);
 	activeProc = procList[0];
 
 	fprintf(output,"Time %d: %s arrived\n", time, procList[j].name);
@@ -250,8 +275,6 @@ void runRR(process *procList, int duration, int numProcesses, int timeQ)
 					j++;
 			}
 
-		//	fprintf(output,"%d\n", time);
-
 			// If not finished, decrement
 			if(activeProc.burstTime > 0)
 			{
@@ -263,6 +286,16 @@ void runRR(process *procList, int duration, int numProcesses, int timeQ)
 			{
 				activeProc.isFinished = 1;
 				fprintf(output,"Time %d: %s finished\n", time, activeProc.name);
+				results[m].name = activeProc.name;
+				results[m].t_time = time - activeProc.arrivalTime;
+
+				for(l = 0; l < numProcesses; l++)
+					if(activeProc.name == procListCopy[l].name)
+					{
+						results[m].w_time = results[m].t_time - procListCopy[l].burstTime;
+					}
+
+				m++;
 
 				// Update procList
 				for (k = 0; k < numProcesses; k++)
@@ -365,7 +398,12 @@ void runRR(process *procList, int duration, int numProcesses, int timeQ)
 		time++;
 	}
 
-	fprintf(output,"Finished at time %d\n", time);
+	fprintf(output,"Finished at time %d\n\n", time);
+
+	for(i = 0; i < numProcesses; i++)
+	{
+		fprintf(output, "%s wait %d turnaround %d\n", results[i].name, results[i].w_time, results[i].t_time);
+	}
 }
 
 int main(int argc, char const *argv[])
@@ -492,6 +530,7 @@ int main(int argc, char const *argv[])
 	fclose(input);
 
 	process *procList = malloc(sizeof(process) * processCount);
+	process *procListCopy = procList;
 
 	//Populate the Processes Array
 	chtemp[0] = 'P';
@@ -510,10 +549,10 @@ int main(int argc, char const *argv[])
 		runFCFS(procList, runfor, processCount);
 	}
 	else if(use[0] == 'r'){
-		runRR(procList, runfor, processCount, quantum);
+		runRR(procList, runfor, processCount, quantum, procListCopy);
 	}
 	else if(use[0] == 's'){
-		runSJF(procList, runfor, processCount);
+		runSJF(procList, runfor, processCount, procListCopy);
 	}
 	
 	return 0;
