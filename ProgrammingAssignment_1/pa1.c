@@ -7,7 +7,7 @@
 typedef struct process
 {
 	char *name;
-	int burstTime, arrivalTime;
+	int burstTime, arrivalTime, isFinished;
 } process;
 
 void printList(process *procList, int numProc)
@@ -20,12 +20,9 @@ void printList(process *procList, int numProc)
 	printf("\n");
 }
 
-process *sortProcessList(process *procList, int numProc)
+process *sortTime(process *procList, int numProc)
 {
 	int i, j;
-
-//	printf("Before sorting...\n");
-//	printList(procList, numProc);
 
 	for(i = 0; i < numProc; i++)
 	{
@@ -40,25 +37,119 @@ process *sortProcessList(process *procList, int numProc)
 		}
 	}
 
-//	printf("After sorting...\n");
-//	printList(procList, numProc);
-
 	return procList;
 }
 
+int allProcessesDone(process *procList, int numProcesses)
+{
+	int isFinished = 1, i = 0;
+
+	for(i = 0; i < numProcesses; i++)
+	{
+		if(procList[i].isFinished == 0)
+		{
+			return 0;
+		}
+	}
+
+	return isFinished;
+}
+
+void runSJF(process *procList, int duration, int numProcesses)
+{
+	int time = 0, isRunning = 0, nextArrival = 0, j = 0, i, isDone = 0, bestTime = INT_MAX;
+	int processTimes[numProcesses];
+	procList = sortTime(procList, numProcesses);
+	process activeProc;
+
+	// Holds arrival times, sorted already
+	for (i = 0; i < numProcesses; i++)
+		processTimes[i] = procList[i].arrivalTime;
+
+	printf("%d processes\nUsing Shortest Job First (Pre)\n\n", numProcesses);
+
+	activeProc = procList[0];	// sorted to have earliest arrival time first
+	printf("Time %d : %s arrived\n", time, procList[j].name);
+	j++;
+
+	printf("Time %d : %s selected (burst %d)\n", time, activeProc.name, activeProc.burstTime);
+
+	while(time < duration)
+	{
+		if(activeProc.burstTime == 0)
+		{
+			printf("Time %d : %s finished\n", time, activeProc.name);
+			activeProc.isFinished = 1;
+
+			for (i = 0; i < numProcesses; i++)
+			{
+				if(activeProc.name == procList[i].name)
+					procList[i] = activeProc;
+			}
+
+			bestTime = INT_MAX;
+			for(i = 0; i < numProcesses; i++)
+			{
+				if(procList[i].burstTime < bestTime && procList[i].isFinished != 1)
+				{
+					bestTime = procList[i].burstTime;
+					activeProc = procList[i];
+				}
+			}
+
+			if(allProcessesDone(procList, numProcesses))
+				break;
+
+			printf("Time %d : %s selected (burst %d)\n", time, activeProc.name, activeProc.burstTime);
+		}
+
+		if(time == processTimes[j])
+		{
+			printf("Time %d : %s arrived\n", time, procList[j].name);
+
+			if(procList[j].burstTime < activeProc.burstTime)
+			{	
+				for (i = 0; i < numProcesses; i++)
+				{
+					if(activeProc.name == procList[i].name)
+						procList[i] = activeProc;
+				}
+
+				activeProc = procList[j];
+				printf("Time %d : %s selected (burst %d)\n", time, activeProc.name, activeProc.burstTime);
+			}
+
+			if((j + 1) != numProcesses)
+				j++;
+		}
+
+		activeProc.burstTime--;
+		time++;
+	}
+
+	while (time < duration)
+	{
+		printf("Time %d : IDLE\n", time);
+		time++;
+	}
+
+	printf("Finished at time %d\n", time);
+}
+
+
 void runFCFS(process *procList, int duration, int numProcesses)
 {
-	int time = 0, isDone = 0, nextArrival = 0, i = 0, j = 0;
-	int arrivalTimes[numProcesses];
-	procList = sortProcessList(procList, numProcesses);
+	int time = 0, isRunning = 0, nextArrival = 0, i = 0, j = 0;
+	int processTimes[numProcesses];
+	procList = sortTime(procList, numProcesses);
 	process activeProc;
 
 	for (i = 0; i < numProcesses; i++)
-		arrivalTimes[i] = procList[i].arrivalTime;
+		processTimes[i] = procList[i].arrivalTime;
 
 	printf("%d processes\nUsing First Come First Served\n\n", numProcesses);
 
-	while(!isDone)
+	while(!isRunning)
 	{
 		for(i = 0; i < numProcesses; i++)
 		{
@@ -74,7 +165,7 @@ void runFCFS(process *procList, int duration, int numProcesses)
 
 			while(activeProc.burstTime != 0)
 			{
-				if(time == arrivalTimes[j])
+				if(time == processTimes[j])
 				{
 					printf("Time %d : %s arrived\n", time, procList[j].name);
 					
@@ -89,214 +180,254 @@ void runFCFS(process *procList, int duration, int numProcesses)
 			printf("Time %d : %s finished\n", time, activeProc.name);
 		}
 
-		isDone = 1;
+		isRunning = 1;
 		printf("Finished at time %d\n", time);
 	}
-
 }
 
-//sort the process list according to the burst length
-process *sortlistbyburst (process *procList, int numProc)
+int processesArrived(process *procList, int numProcesses, int time)
 {
-    int i = 0;
-    int j = 0;
+	int i = 0, arrivalCount = 0;
 
-    procList = sortProcessList(procList, numProcesses);
-
-    //bubble sort the list by burst time except the first occurring process
-    for(i = 1; i < numProc; i++)
+	for(i = 0; i < numProcesses; i++)
 	{
-		for(j = i+1; j < numProc; j++)
-		{
-			if(procList[i].burstTime > procList[j].burstTime)
-			{
-				process temp = procList[i];
-				procList[i] = procList[j];
-				procList[j] = temp;
-			}
-		}
+		if(procList[i].arrivalTime <= time)
+			arrivalCount++;
 	}
 
-	return procList;
+	return arrivalCount;
 }
 
-//implementing the preemptive shortest job first
-void preemshortestjobfirst (process *procList, int duration, int numProcesses)
+void runRR(process *procList, int duration, int numProcesses, int timeQ)
 {
-    int time = 0;
-    int isDone = 0;
-    int i = 0;
-    int j = 1;
+	int time = 0, isRunning = 0, nextArrival = 0, i = 0, j = 0, k = 0, isDone = 0, lastRun, procArrived;
+	int processTimes[numProcesses];
+	procList = sortTime(procList, numProcesses);
+	process activeProc;
 
-    process *arrivallist = sortProcessList(procList, numProcesses);
+	for (i = 0; i < numProcesses; i++)
+		processTimes[i] = procList[i].arrivalTime;
 
-    procList = sortlistbyburst(procList, numProcesses);
+	printf("%d processes\nUsing Round-Robin\nQuantum %d\n", numProcesses, timeQ);
+	activeProc = procList[0];
 
-    process currproc = procList[i];
+	printf("Time %d: %s arrived\n", time, procList[j].name);
+	j++;
 
-    while(!isDone)
-    {
-        if(time == duration)
-        {
-            isDone = 1;
-            printf("Finished at time %d\n", time);
-            continue;
-        }
+	while(time < duration)
+	{	
+		// Go for 2 cycles
+		for(i = 0; i < timeQ; i++)
+		{
+			if (i == 0)
+				printf("Time %d: %s selected (burst %d)\n", time, activeProc.name, activeProc.burstTime);
 
-        if(time == arivallist[i].arrivalTime)
-        {
-            printf("Time %d: %s arrived\n", time, currproc.name);
+			if(time == processTimes[j])
+			{
+				printf("Time %d: %s arrived\n", time, procList[j].name);
+				
+				if((j + 1) != numProcesses)
+					j++;
+			}
 
-            if(i == 0)
-            {
-                printf("Time %d: %s selected (burst %d)\n", time, currproc.name, currproc.burstTime);
-            }
+			// If not finished, decrement
+			if(activeProc.burstTime != 0)
+			{
+				activeProc.burstTime--;
+				time++;
+			}
 
-            i++;
-        }
+			// If finished, swap out
+			else
+			{
+				time++;
+				activeProc.isFinished = 1;
+				printf("Time %d: %s finished\n", time, activeProc.name);
 
-        if(arivallist[i].arivalTime == procList[j].arivalTime)
-        {
-            printf("Time %d: %s selected (burst %d)\n", time, currproc.name, currproc.burstTime);
-        }
+				// Update procList
+				for (k = 0; k < numProcesses; k++)
+				{
+					if(activeProc.name == procList[k].name)
+					{
+						procList[k] = activeProc;
+						lastRun = k;
+					}
+				}
 
-        if(currproc.burstTime == 0)
-        {
-            printf("Time %d: %s finished\n", time, currproc.name);
+				// Get the next one
+				for(k = 0; k < numProcesses; k++)
+				{
+					procArrived = processesArrived(procList, numProcesses, time);
 
-            if(j > 0 && procList[j-1].burstTime != 0)
-            {
-                j--;
-                currproc = procList[j];
-            }
-            else
-            {
-                j++;
-                currproc = procList[j];
-            }
-        }
+					if(procList[k].burstTime != 0 && (procArrived))
+					{
+						activeProc = procList[k];
+						break;
+					}
 
-        if(i > 0)
-        {
-            currproc.burstTime--;
-        }
+					else if(procList[k].burstTime != 0 && k != lastRun)
+					{
+						activeProc = procList[k];
+						break;
+					}
 
-        time++;
-    }
+					else if (k == numProcesses - 1)
+					{
+						k = 0;
+						isDone++;
+
+						if(isDone > 1)
+							break;
+					}
+				}
+
+				break;
+			}			
+		}
+
+		isDone = 0;
+
+		if(time == processTimes[j])
+		{
+			printf("Time %d : %s arrived\n", time, procList[j].name);
+			
+			if((j + 1) != numProcesses)
+				j++;
+		}
+
+		// Update procList
+		for (k = 0; k < numProcesses; k++)
+		{
+			if(activeProc.name == procList[k].name)
+			{
+				procList[k] = activeProc;
+				lastRun = k;
+			}
+		}
+
+		// Get the next one
+		for(k = 0; k < numProcesses; k++)
+		{
+			procArrived = processesArrived(procList, numProcesses, time);
+
+			if(procList[k].burstTime != 0 && (procArrived == 1))
+			{
+				activeProc = procList[k];
+				break;
+			}
+
+			else if(procList[k].burstTime != 0 && k != lastRun)
+			{
+				activeProc = procList[k];
+				break;
+			}
+
+			else if (k == numProcesses - 1)
+			{
+				k = 0;
+				isDone++;
+
+				if(isDone > 2)
+					break;
+			}
+		}
+
+		isDone = 0;
+	}
+
+	while (time < duration)
+	{
+		printf("Time %d : IDLE\n", time);
+		time++;
+	}
+
+	printf("Finished at time %d\n", time);
 }
 
 int main(int argc, char const *argv[])
 {
-	char inFilename[] = "set1_process.in";
+	char inFilename[] = "set2_process.in";
 	char outFilename[] = "processes.out";
 	int i = 0, j = 0, h = 0, debug = 0, linenumber = 1, x = 0;
 	FILE *input, *output;
+
 	// Process variables
-	int processCount, runfor, quantum; 
+	int processCount, runfor, quantum;
 	char use[5]; //Holds the algorithm type
 	char temp[10]; //Temp array to convert the input characters to integers 
-	char chtemp[2];
+	char *chtemp = malloc(sizeof(char) * 2);
 	char lineBuffer[1024]; 
-	int arrivalTimes[1024], burstTimes[1024];
+	int processTimes[1024], burstTimes[1024];
 
-	/*if (debug)
+	input = fopen(inFilename, "r");
+
+	// TO DO: Do output file stuff in the Algorithm functions where the print statments are
+
+	if (input == NULL)
 	{
-		for (i = 1; i < 5; i++)
-		{
-			input = fopen(inFilename, "r");
+		printf("file %s not found!\n", inFilename);
+		return -1;
+	}
 
-			if (input == NULL)
-			{
-				printf("file %s not found!\n", inFilename);
-				return -1;
-			}
-
-			char *lineBuffer = malloc(128);
-			while(fgets(lineBuffer, 128, input) != NULL)
-			{
-				printf("%s", lineBuffer);
-			}
-
-			fclose(input);
-			inFilename[3] = i + '0';
-		}
-	}*/
-
-/*	else
-	{*/
-		input = fopen(inFilename, "r");
-		// TO DO: Do output file stuff in the Algorithm functions where the print statments are
-//		output = fopen(outFilename, "w");
-
-		if (input == NULL)
-		{
-			printf("file %s not found!\n", inFilename);
-			return -1;
-		}
-
-		
-		while(fgets(lineBuffer, 128, input) != NULL)
-		{	// Parse Through each line
-			// printf("Line number = %d: %s", linenumber,lineBuffer);
-			// Clear temporary values
-			j = 0;
-			x = 0;
-			memset(&temp[0], 0, sizeof(temp));
-			// Read until comment
-			if(linenumber <= 4){ 
-				while(lineBuffer[j] != '#'){
-					//Process count always on first line
-					if((lineBuffer[j] == ' ') && linenumber == 1){
-						while(lineBuffer[j + 1] != ' '){
-							// Until next space grab the number
-							temp[x] = lineBuffer[j + 1];
-							x++;
-							j++;
-						}
-						// Convert char array of numbers to an integer
-						sscanf(temp, "%d", &processCount);
-						//printf("%d Processes\n", processCount);
-						break;
-					}
-					// time cycles on line 2
-					if((lineBuffer[j] == ' ') && linenumber == 2){
-						while(lineBuffer[j + 1] != ' '){
-							// Until next space grab the number
-							temp[x] = lineBuffer[j + 1];
-							x++;
-							j++;
-						}
-						sscanf(temp, "%d", &runfor);
-						//printf("Run for %d time cycles\n", runfor);	
-						break;
-					}
-					if((lineBuffer[j] == ' ') && linenumber == 3){
-						while(lineBuffer[j + 1] != ' '){
-							// Until next space grab the number
-							use[x] = lineBuffer[j + 1];
-							x++;
-							j++;
-						}
-					
-						//printf("Using %s\n", use);	
-						break;
-					}
-					// line four can either have the quantum or a process input
-					if(linenumber == 4 && lineBuffer[j] == ' '){
-						while(lineBuffer[j + 1] != ' '){
+	while(fgets(lineBuffer, 128, input) != NULL)
+	{	// Parse Through each line
+		// printf("Line number = %d: %s", linenumber,lineBuffer);
+		// Clear temporary values
+		j = 0;
+		x = 0;
+		memset(&temp[0], 0, sizeof(temp));
+		// Read until comment
+		if(linenumber <= 4){ 
+			while(lineBuffer[j] != '#') {
+				//Process count always on first line
+				if((lineBuffer[j] == ' ') && linenumber == 1) {
+					while(lineBuffer[j + 1] != ' ') {
 						// Until next space grab the number
 						temp[x] = lineBuffer[j + 1];
 						x++;
 						j++;
 					}
-						sscanf(temp, "%d", &quantum);
-						//printf("Quantum = %d\n", quantum);	
-						break;
+					// Convert char array of numbers to an integer
+					sscanf(temp, "%d", &processCount);
+					//printf("%d Processes\n", processCount);
+					break;
+				}
+				// time cycles on line 2
+				if((lineBuffer[j] == ' ') && linenumber == 2) {
+					while(lineBuffer[j + 1] != ' ') {
+						// Until next space grab the number
+						temp[x] = lineBuffer[j + 1];
+						x++;
+						j++;
 					}
-					
-
+					sscanf(temp, "%d", &runfor);
+					break;
+				}
+				if((lineBuffer[j] == ' ') && linenumber == 3) {
+					while(lineBuffer[j + 1] != ' ') {
+						// Until next space grab the number
+						use[x] = lineBuffer[j + 1];
+						x++;
+						j++;
+					}					
+					break;
+				}
+				// line four can either have the quantum or a process input
+				if(linenumber == 4 && lineBuffer[j] == ' '){
+					while(lineBuffer[j + 1] != ' '){
+					// Until next space grab the number
+					temp[x] = lineBuffer[j + 1];
+					x++;
 					j++;
 				}
+					sscanf(temp, "%d", &quantum);
+					//printf("Quantum = %d\n", quantum);	
+					break;
+				}
+				
+
+				j++;
+			}
 		}
 		// Parse the line buffer for Process information
 		else{			
@@ -312,8 +443,7 @@ int main(int argc, char const *argv[])
 						x++;
 						j++;
 					}
-					sscanf(temp, "%d", &arrivalTimes[i]);
-					//printf("For process %d arrival time is %d\n", i + 1, arrivalTimes[i]);
+					sscanf(temp, "%d", &processTimes[i]);
 					i++;
 				}
 				// Grab the burst number after the word burs't'
@@ -326,7 +456,6 @@ int main(int argc, char const *argv[])
 						j++;
 					}
 					sscanf(temp, "%d", &burstTimes[h]);
-					//printf("For process %d burst length is %d\n", h + 1, burstTimes[h]);
 					h++;
 				}	
 				j++;		
@@ -336,54 +465,32 @@ int main(int argc, char const *argv[])
 		linenumber++;
 	}
 
-		fclose(input);
-	/*}*/
+	fclose(input);
 
 	process *procList = malloc(sizeof(process) * processCount);
 
 	//Populate the Processes Array
-
 	chtemp[0] = 'P';
 	for(i = 0; i < processCount; i++){
-		procList[i].arrivalTime = arrivalTimes[i];
+		procList[i].arrivalTime = processTimes[i];
 		procList[i].burstTime = burstTimes[i];
 		procList[i].name = malloc(sizeof(char) * 2);
+		procList[i].isFinished = 0;
 		chtemp[1] = (i+1) + '0';
 		strcpy(procList[i].name, chtemp);
-		//printf("%s\n",procList[i].name);
 	}
 
 	// Send to Scheduling Algorithms 
 	// If First Come First Serve
-	if(use[0] == 'f'){
-
+	if(use[0] == 'f') {
 		runFCFS(procList, runfor, processCount);
 	}
 	else if(use[0] == 'r'){
-		// TO DO: write round robin
-		printf("use Round Robin\n");
+		runRR(procList, runfor, processCount, quantum);
 	}
 	else if(use[0] == 's'){
-		// TO DO: write shortest job first
-		printf("use Shortest Job First\n");
+		runSJF(procList, runfor, processCount);
 	}
-
-/*	procList[0].arrivalTime = 0;
-	procList[0].burstTime = 24;
-	procList[0].name = malloc(sizeof(char) * 2);
-	strcpy(procList[0].name, "P1");
-	
-	procList[1].arrivalTime = 3;
-	procList[1].burstTime = 3;
-	procList[1].name = malloc(sizeof(char) * 2);
-	strcpy(procList[1].name, "P2");
-
-	procList[2].arrivalTime = 4;
-	procList[2].burstTime = 3;
-	procList[2].name = malloc(sizeof(char) * 2);
-	strcpy(procList[2].name, "P3");
-
-	runFCFS(procList, 30, 3);*/
 	
 	return 0;
 }
