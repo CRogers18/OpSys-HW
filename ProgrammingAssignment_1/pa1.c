@@ -166,15 +166,16 @@ void runSJF(process *procList, int duration, int numProcesses, process *procList
 }
 
 
-void runFCFS(process *procList, int duration, int numProcesses)
+void runFCFS(process *procList, int duration, int numProcesses, process *procListCopy)
 {
-	int time = 0, isRunning = 0, nextArrival = 0, i = 0, j = 0;
+	int time = 0, isRunning = 0, nextArrival = 0, i = 0, j = 0, k = 0, l = 0;
 	int processTimes[numProcesses];
 	procList = sortTime(procList, numProcesses);
 	process activeProc;
 	char outFilename[] = "processes.out";
 	FILE *output;
 	output = fopen(outFilename, "w");
+	result *results = malloc(sizeof(result) * numProcesses);
 
 	for (i = 0; i < numProcesses; i++)
 		processTimes[i] = procList[i].arrivalTime;
@@ -210,12 +211,24 @@ void runFCFS(process *procList, int duration, int numProcesses)
 			}
 
 			fprintf(output,"Time %d : %s finished\n", time, activeProc.name);
+			results[k].name = activeProc.name;
+			results[k].t_time = time - activeProc.arrivalTime;
+
+			for(l = 0; l < numProcesses; l++)
+			{
+				if(activeProc.name == procListCopy[l].name)
+					results[k].w_time = results[k].t_time - procListCopy[l].burstTime;
+			}
+
+			k++;
 		}
 
 		isRunning = 1;
-		fprintf(output,"Finished at time %d\n", time);
-		activeProc.endTime = time;
-
+		fprintf(output,"Finished at time %d\n\n", time);
+		for(i = 0; i < numProcesses; i++)
+		{
+			fprintf(output, "%s wait %d turnaround %d\n", results[i].name, results[i].w_time, results[i].t_time);
+		}
 	}
 
 }
@@ -290,10 +303,12 @@ void runRR(process *procList, int duration, int numProcesses, int timeQ, process
 				results[m].t_time = time - activeProc.arrivalTime;
 
 				for(l = 0; l < numProcesses; l++)
+				{
 					if(activeProc.name == procListCopy[l].name)
 					{
 						results[m].w_time = results[m].t_time - procListCopy[l].burstTime;
 					}
+				}
 
 				m++;
 
@@ -408,7 +423,7 @@ void runRR(process *procList, int duration, int numProcesses, int timeQ, process
 
 int main(int argc, char const *argv[])
 {
-	char inFilename[] = "set2_process.in";
+	char inFilename[] = "set1_process.in";
 	char outFilename[] = "processes.out";
 	int i = 0, j = 0, h = 0, debug = 0, linenumber = 1, x = 0;
 	FILE *input, *output;
@@ -546,7 +561,7 @@ int main(int argc, char const *argv[])
 	// Send to Scheduling Algorithms 
 	// If First Come First Serve
 	if(use[0] == 'f') {
-		runFCFS(procList, runfor, processCount);
+		runFCFS(procList, runfor, processCount, procListCopy);
 	}
 	else if(use[0] == 'r'){
 		runRR(procList, runfor, processCount, quantum, procListCopy);
