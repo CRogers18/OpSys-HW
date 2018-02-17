@@ -7,17 +7,20 @@
 typedef struct process
 {
 	char *name;
-	int burstTime, arrivalTime, isFinished;
+	int burstTime, arrivalTime, isFinished, endTime;
 } process;
 
 void printList(process *procList, int numProc)
 {
 	int i;
+	char outFilename[] = "processes.out";
+	FILE *output;
+	output = fopen(outFilename, "w");
 
 	for(i = 0; i < numProc; i++)
-		printf("%s : %d\t", procList[i].name, procList[i].arrivalTime);
+		fprintf(output,"%s : %d\t", procList[i].name, procList[i].arrivalTime);
 
-	printf("\n");
+	fprintf(output,"\n");
 }
 
 process *sortTime(process *procList, int numProc)
@@ -61,24 +64,27 @@ void runSJF(process *procList, int duration, int numProcesses)
 	int processTimes[numProcesses];
 	procList = sortTime(procList, numProcesses);
 	process activeProc;
+	char outFilename[] = "processes.out";
+	FILE *output;
+	output = fopen(outFilename, "w");
 
 	// Holds arrival times, sorted already
 	for (i = 0; i < numProcesses; i++)
 		processTimes[i] = procList[i].arrivalTime;
 
-	printf("%d processes\nUsing Shortest Job First (Pre)\n\n", numProcesses);
+	fprintf(output,"%d processes\nUsing Shortest Job First (Pre)\n\n", numProcesses);
 
 	activeProc = procList[0];	// sorted to have earliest arrival time first
-	printf("Time %d : %s arrived\n", time, procList[j].name);
+	fprintf(output,"Time %d : %s arrived\n", time, procList[j].name);
 	j++;
 
-	printf("Time %d : %s selected (burst %d)\n", time, activeProc.name, activeProc.burstTime);
+	fprintf(output,"Time %d : %s selected (burst %d)\n", time, activeProc.name, activeProc.burstTime);
 
 	while(time < duration)
 	{
 		if(activeProc.burstTime == 0)
 		{
-			printf("Time %d : %s finished\n", time, activeProc.name);
+			fprintf(output,"Time %d : %s finished\n", time, activeProc.name);
 			activeProc.isFinished = 1;
 
 			for (i = 0; i < numProcesses; i++)
@@ -100,12 +106,12 @@ void runSJF(process *procList, int duration, int numProcesses)
 			if(allProcessesDone(procList, numProcesses))
 				break;
 
-			printf("Time %d : %s selected (burst %d)\n", time, activeProc.name, activeProc.burstTime);
+			fprintf(output,"Time %d : %s selected (burst %d)\n", time, activeProc.name, activeProc.burstTime);
 		}
 
 		if(time == processTimes[j])
 		{
-			printf("Time %d : %s arrived\n", time, procList[j].name);
+			fprintf(output,"Time %d : %s arrived\n", time, procList[j].name);
 
 			if(procList[j].burstTime < activeProc.burstTime)
 			{	
@@ -116,7 +122,7 @@ void runSJF(process *procList, int duration, int numProcesses)
 				}
 
 				activeProc = procList[j];
-				printf("Time %d : %s selected (burst %d)\n", time, activeProc.name, activeProc.burstTime);
+				fprintf(output,"Time %d : %s selected (burst %d)\n", time, activeProc.name, activeProc.burstTime);
 			}
 
 			if((j + 1) != numProcesses)
@@ -129,11 +135,11 @@ void runSJF(process *procList, int duration, int numProcesses)
 
 	while (time < duration)
 	{
-		printf("Time %d : IDLE\n", time);
+		fprintf(output,"Time %d : IDLE\n", time);
 		time++;
 	}
 
-	printf("Finished at time %d\n", time);
+	fprintf(output,"Finished at time %d\n", time);
 }
 
 
@@ -143,11 +149,14 @@ void runFCFS(process *procList, int duration, int numProcesses)
 	int processTimes[numProcesses];
 	procList = sortTime(procList, numProcesses);
 	process activeProc;
+	char outFilename[] = "processes.out";
+	FILE *output;
+	output = fopen(outFilename, "w");
 
 	for (i = 0; i < numProcesses; i++)
 		processTimes[i] = procList[i].arrivalTime;
 
-	printf("%d processes\nUsing First Come First Served\n\n", numProcesses);
+	fprintf(output,"%d processes\nUsing First Come First Served\n\n", numProcesses);
 
 	while(!isRunning)
 	{
@@ -157,17 +166,17 @@ void runFCFS(process *procList, int duration, int numProcesses)
 
 			if(i == 0)
 			{
-				printf("Time %d : %s arrived\n", time, procList[j].name);
+				fprintf(output,"Time %d : %s arrived\n", time, procList[j].name);
 				j++;
 			}
 
-			printf("Time %d : %s selected (burst %d)\n", time, activeProc.name, activeProc.burstTime);
+			fprintf(output,"Time %d : %s selected (burst %d)\n", time, activeProc.name, activeProc.burstTime);
 
 			while(activeProc.burstTime != 0)
 			{
 				if(time == processTimes[j])
 				{
-					printf("Time %d : %s arrived\n", time, procList[j].name);
+					fprintf(output,"Time %d : %s arrived\n", time, procList[j].name);
 					
 					if((j + 1) != numProcesses)
 						j++;
@@ -177,12 +186,15 @@ void runFCFS(process *procList, int duration, int numProcesses)
 				time++;
 			}
 
-			printf("Time %d : %s finished\n", time, activeProc.name);
+			fprintf(output,"Time %d : %s finished\n", time, activeProc.name);
 		}
 
 		isRunning = 1;
-		printf("Finished at time %d\n", time);
+		fprintf(output,"Finished at time %d\n", time);
+		activeProc.endTime = time;
+
 	}
+
 }
 
 int processesArrived(process *procList, int numProcesses, int time)
@@ -204,14 +216,16 @@ void runRR(process *procList, int duration, int numProcesses, int timeQ)
 	int processTimes[numProcesses];
 	procList = sortTime(procList, numProcesses);
 	process activeProc;
-
+	char outFilename[] = "processes.out";
+	FILE *output;
+	output = fopen(outFilename, "w");
 	for (i = 0; i < numProcesses; i++)
 		processTimes[i] = procList[i].arrivalTime;
 
-	printf("%d processes\nUsing Round-Robin\nQuantum %d\n", numProcesses, timeQ);
+	fprintf(output,"%d processes\nUsing Round-Robin\nQuantum %d\n", numProcesses, timeQ);
 	activeProc = procList[0];
 
-	printf("Time %d: %s arrived\n", time, procList[j].name);
+	fprintf(output,"Time %d: %s arrived\n", time, procList[j].name);
 	j++;
 
 	while(time < duration && !isFinished)
@@ -226,17 +240,17 @@ void runRR(process *procList, int duration, int numProcesses, int timeQ)
 			}
 
 			if (i == 0)
-				printf("Time %d: %s selected (burst %d)\n", time, activeProc.name, activeProc.burstTime);
+				fprintf(output,"Time %d: %s selected (burst %d)\n", time, activeProc.name, activeProc.burstTime);
 
 			if(time == processTimes[j])
 			{
-				printf("Time %d: %s arrived\n", time, procList[j].name);
+				fprintf(output,"Time %d: %s arrived\n", time, procList[j].name);
 				
 				if((j + 1) != numProcesses)
 					j++;
 			}
 
-		//	printf("%d\n", time);
+		//	fprintf(output,"%d\n", time);
 
 			// If not finished, decrement
 			if(activeProc.burstTime > 0)
@@ -248,7 +262,7 @@ void runRR(process *procList, int duration, int numProcesses, int timeQ)
 			else if (activeProc.burstTime == 0)
 			{
 				activeProc.isFinished = 1;
-				printf("Time %d: %s finished\n", time, activeProc.name);
+				fprintf(output,"Time %d: %s finished\n", time, activeProc.name);
 
 				// Update procList
 				for (k = 0; k < numProcesses; k++)
@@ -298,7 +312,7 @@ void runRR(process *procList, int duration, int numProcesses, int timeQ)
 
 		if(time == processTimes[j])
 		{
-			printf("Time %d: %s arrived\n", time, procList[j].name);
+			fprintf(output,"Time %d: %s arrived\n", time, procList[j].name);
 			
 			if((j + 1) != numProcesses)
 				j++;
@@ -347,11 +361,11 @@ void runRR(process *procList, int duration, int numProcesses, int timeQ)
 
 	while (time < duration)
 	{
-		printf("Time %d: IDLE\n", time);
+		fprintf(output,"Time %d: IDLE\n", time);
 		time++;
 	}
 
-	printf("Finished at time %d\n", time);
+	fprintf(output,"Finished at time %d\n", time);
 }
 
 int main(int argc, char const *argv[])
@@ -375,13 +389,13 @@ int main(int argc, char const *argv[])
 
 	if (input == NULL)
 	{
-		printf("file %s not found!\n", inFilename);
+		fprintf(output,"file %s not found!\n", inFilename);
 		return -1;
 	}
 
 	while(fgets(lineBuffer, 128, input) != NULL)
 	{	// Parse Through each line
-		// printf("Line number = %d: %s", linenumber,lineBuffer);
+		// fprintf(output,"Line number = %d: %s", linenumber,lineBuffer);
 		// Clear temporary values
 		j = 0;
 		x = 0;
@@ -399,7 +413,7 @@ int main(int argc, char const *argv[])
 					}
 					// Convert char array of numbers to an integer
 					sscanf(temp, "%d", &processCount);
-					//printf("%d Processes\n", processCount);
+					//fprintf(output,"%d Processes\n", processCount);
 					break;
 				}
 				// time cycles on line 2
@@ -431,7 +445,7 @@ int main(int argc, char const *argv[])
 					j++;
 				}
 					sscanf(temp, "%d", &quantum);
-					//printf("Quantum = %d\n", quantum);	
+					//fprintf(output,"Quantum = %d\n", quantum);	
 					break;
 				}
 				
