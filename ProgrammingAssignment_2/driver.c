@@ -1,31 +1,19 @@
-/**
- * @file   ebbchar.c
- * @author Derek Molloy
- * @date   7 April 2015
- * @version 0.1
- * @brief   An introductory character driver to support the second article of my series on
- * Linux loadable kernel module (LKM) development. This module maps to /dev/ebbchar and
- * comes with a helper C program that can be run in Linux user space to communicate with
- * this the LKM.
- * @see http://www.derekmolloy.ie/ for a full description and follow-up descriptions.
- */
-
 #include <linux/init.h>           // Macros used to mark up functions e.g. __init __exit
 #include <linux/module.h>         // Core header for loading LKMs into the kernel
 #include <linux/device.h>         // Header to support the kernel Driver Model
 #include <linux/kernel.h>         // Contains types, macros, functions for the kernel
 #include <linux/fs.h>             // Header for the Linux file system support
 #include <linux/uaccess.h>          // Required for the copy to user function
-#define  DEVICE_NAME "ebbchar"    ///< The device will appear at /dev/ebbchar using this value
-#define  CLASS_NAME  "ebb"        ///< The device class -- this is a character device driver
+#define  DEVICE_NAME "charDriver"    ///< The device will appear at /dev/ebbchar using this value
+#define  CLASS_NAME  "driver"        ///< The device class -- this is a character device driver
 
 MODULE_LICENSE("GPL");            ///< The license type -- this affects available functionality
-MODULE_AUTHOR("Derek Molloy");    ///< The author -- visible when you use modinfo
-MODULE_DESCRIPTION("A simple Linux char driver for the BBB");  ///< The description -- see modinfo
-MODULE_VERSION("0.1");            ///< A version number to inform users
+MODULE_AUTHOR("Ryan Diaz, insert name, insert name");    ///< The author -- visible when you use modinfo
+MODULE_DESCRIPTION("Programming Assignment 2");  ///< The description -- see modinfo
+MODULE_VERSION("1.0");            ///< A version number to inform users
 
 static int    majorNumber;                  ///< Stores the device number -- determined automatically
-static char   message[256] = {0};           ///< Memory for the string that is passed from userspace
+static char   message[1024] = {0};           ///< Memory for the string that is passed from userspace
 static short  size_of_message;              ///< Used to remember the size of the string stored
 static int    numberOpens = 0;              ///< Counts the number of times the device is opened
 static struct class*  ebbcharClass  = NULL; ///< The device-driver class struct pointer
@@ -56,7 +44,7 @@ static struct file_operations fops =
  *  @return returns 0 if successful
  */
 static int __init ebbchar_init(void){
-   printk(KERN_INFO "EBBChar: Initializing the EBBChar LKM\n");
+   printk(KERN_INFO "EBBChar: Initializing Driver Module\n");
 
    // Try to dynamically allocate a major number for the device -- more difficult but worth it
    majorNumber = register_chrdev(0, DEVICE_NAME, &fops);
@@ -118,7 +106,8 @@ static int dev_open(struct inode *inodep, struct file *filep){
  *  @param len The length of the b
  *  @param offset The offset if required
  */
-static ssize_t dev_read(struct file *filep, char *buffer, size_t len, loff_t *offset){
+static ssize_t dev_read(struct file *filep, char *buffer, size_t len, loff_t *offset)
+{
    int error_count = 0;
    // copy_to_user has the format ( * to, *from, size) and returns 0 on success
    error_count = copy_to_user(buffer, message, size_of_message);
@@ -141,10 +130,11 @@ static ssize_t dev_read(struct file *filep, char *buffer, size_t len, loff_t *of
  *  @param len The length of the array of data that is being passed in the const char buffer
  *  @param offset The offset if required
  */
-static ssize_t dev_write(struct file *filep, const char *buffer, size_t len, loff_t *offset){
+static ssize_t dev_write(struct file *filep, const char *buffer, size_t len, loff_t *offset)
+{
    sprintf(message, "%s(%zu letters)", buffer, len);   // appending received string with its length
    size_of_message = strlen(message);                 // store the length of the stored message
-   printk(KERN_INFO "EBBChar: Received %zu characters from the user\n", len);
+   printk(KERN_INFO "Driver: Received %zu characters from the user\n", len);
    return len;
 }
 
