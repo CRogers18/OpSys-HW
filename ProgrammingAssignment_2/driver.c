@@ -106,20 +106,28 @@ static int dev_open(struct inode *inodep, struct file *filep){
  *  @param len The length of the b
  *  @param offset The offset if required
  */
-static ssize_t dev_read(struct file *filep, char *buffer, size_t len, loff_t *offset)
+void dev_read(struct file *filep, char *buffer, size_t len, loff_t *offset)
 {
    int error_count = 0;
+   int i = 0;
    // copy_to_user has the format ( * to, *from, size) and returns 0 on success
-   error_count = copy_to_user(buffer, message, size_of_message);
+  for(i = 0; i < len; i++)
+  {
+     printf("%c", buffer[i]);
+      
+     buffer[i] = '0';
+  }
+   
+  len = 0;
 
-   if (error_count==0){            // if true then have success
+   /*if (error_count==0){            // if true then have success
       printk(KERN_INFO "EBBChar: Sent %d characters to the user\n", size_of_message);
       return (size_of_message=0);  // clear the position to the start and return 0
    }
    else {
       printk(KERN_INFO "EBBChar: Failed to send %d characters to the user\n", error_count);
       return -EFAULT;              // Failed -- return a bad address message (i.e. -14)
-   }
+   }*/
 }
 
 /** @brief This function is called whenever the device is being written to from user space i.e.
