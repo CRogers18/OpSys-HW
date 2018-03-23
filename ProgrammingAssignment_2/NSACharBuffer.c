@@ -87,11 +87,7 @@ static ssize_t dev_write(struct file *filp, const char* buff, size_t len, loff_t
  
     for(i = 0; i < len; i++)
     {
-<<<<<<< HEAD:ProgrammingAssignment_2/NSACharBuffer.c
         if(currentPos == 1024)
-=======
-        if(currentPos == 1000)
->>>>>>> d32e5a9fdddf61def6284cc79f79762a508a095e:ProgrammingAssignment_2/driver.c
         {
             printk(KERN_INFO "[ERROR] Buffer full, %d bytes were written.\n", bytesWritten);
             return len;
