@@ -5,10 +5,10 @@
 #include <asm/uaccess.h>
  
 MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("Character Buffer Driver, totally not a virus");
+MODULE_DESCRIPTION("Character Buffer Driver, totally not a virus bro");
 MODULE_AUTHOR("Group 66");
- 
-static char mainBuffer[100];
+
+static char mainBuffer[1024];
 static int currentPos = 0, timesOpened = 0;
  
 static int dev_open(struct inode*, struct file*);
@@ -29,9 +29,9 @@ int init_module(void)
     int num = register_chrdev(42,"NSACharBuffer", &fileOps);
  
     if(num < 0)
-        printk(KERN_INFO "Device failed to register :(\n");
+        printk(KERN_INFO "[ERROR] Device failed to register :(\n");
     else
-        printk(KERN_INFO "Device registered successfully\n");
+        printk(KERN_INFO "[INIT] Device registered successfully\n");
  
     return num;
 }
@@ -40,7 +40,7 @@ void cleanup_module(void)
 {
     unregister_chrdev(42,"NSACharBuffer");
  
-    printk(KERN_INFO "Device un-registered successfully\n");
+    printk(KERN_INFO "[CLEANUP] Device un-registered successfully\n");
 }
  
 static int dev_open(struct inode *inod, struct file *fil)
@@ -51,43 +51,48 @@ static int dev_open(struct inode *inod, struct file *fil)
  
 static ssize_t dev_read(struct file *filp, char* buff, size_t len, loff_t* off)
 {
-   unsigned short i = 0, bytesRead = 0;
-
-   printk(KERN_INFO "Reading from device.....\n");
-   // Needs to handle if len is greater than or less than current position
-   while(i < currentPos)
+    unsigned short i = 0, buffSize = 0;
+   
+    if(currentPos == 0)
     {
-        // WARNING: Possible overflow on buff++ here
+        printk(KERN_INFO "[ERROR] Tried to read from an empty buffer\n");
+        return 0;
+    }
+ 
+    for(i = 0; i < len; i++)
+    {
+        if(i == currentPos)
+        {
+            printk(KERN_INFO "[ERROR] No data beyond %d bytes, cannot fully service request of %d bytes", currentPos, len);
+            currentPos = 0;
+            return buffSize;
+        }
+ 
         printk(KERN_INFO "Read %c from the buffer.\n", mainBuffer[i]);
         put_user(mainBuffer[i], buff++);
-        bytesRead++;
-        i++;
+        buffSize++;
     }
-
-   if(len > currentPos){
-      printk(KERN_ALERT "Not enough data to be read. Only %d bytes available to be read.\n", currentPos);
-      currentPos = 0;
-      return len;
-   }
-    
-   currentPos = 0;
  
-   return bytesRead;
+    for(i = len; i < currentPos; i++)
+        mainBuffer[i-len] = mainBuffer[i];
+       
+    currentPos -= len;
+ 
+    return buffSize;
 }
  
 static ssize_t dev_write(struct file *filp, const char* buff, size_t len, loff_t* off)
 {
     unsigned short bytesWritten = 0, i = 0;
-   
-    printk(KERN_INFO "Writting to the device...\n");
-
-   for(i = 0; i < len-1; i++)
+ 
+    for(i = 0; i < len; i++)
     {
-        if(currentPos == 100)
+        if(currentPos == 1024)
         {
-            printk(KERN_INFO "Buffer full, %d bytes were written.\n", bytesWritten);
+            printk(KERN_INFO "[ERROR] Buffer full, %d bytes were written.\n", bytesWritten);
             return len;
         }
+ 
         else
         {
             printk(KERN_INFO "Inserted %c into the buffer.\n", buff[i]);
@@ -102,6 +107,6 @@ static ssize_t dev_write(struct file *filp, const char* buff, size_t len, loff_t
  
 static int dev_release(struct inode* inod, struct file* fil)
 {
-    printk(KERN_INFO "NSACharBuffer Device was closed... maybe...\n");
+    printk(KERN_INFO "[RELEASE] NSACharBuffer Device was closed... maybe...\n");
     return 0;
 }
