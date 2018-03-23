@@ -83,7 +83,7 @@ static ssize_t dev_write(struct file *filp, const char* buff, size_t len, loff_t
 
    for(i = 0; i < len-1; i++)
     {
-        if(currentPos == 100)
+        if(currentPos == 1000)
         {
             printk(KERN_INFO "Buffer full, %d bytes were written.\n", bytesWritten);
             return len;
