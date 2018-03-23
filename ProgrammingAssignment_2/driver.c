@@ -1,81 +1,62 @@
-#include <linux/init.h>           
-#include <linux/module.h>         
-#include <linux/device.h>         
-#include <linux/kernel.h>         
-#include <linux/fs.h>             
-#include <linux/uaccess.h>         
-#define  DEVICE_NAME "driver"    
-
-MODULE_LICENSE("GPL");                    // The license type
-MODULE_DESCRIPTION("Programming Assignment 2");  
-MODULE_VERSION("1.0");            
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/string.h>
+#include <linux/fs.h>
+#include <asm/uaccess.h>
+ 
+MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION("Character Buffer Driver, totally not a virus");
 MODULE_AUTHOR("Group 66");
-
-static char   msg[1024] = {0};           // Memory for the string that is passed from userspace
-static short  currentPos = 0;          // Used to remember the position on the Character array
-static int    numberOpens = 0;           // Counts the number of times the device is opened
-
-// The prototype functions for the character driver 
-static int     dev_open(struct inode *, struct file *);
-static int     dev_release(struct inode *, struct file *);
-static ssize_t dev_read(struct file *, char *, size_t, loff_t *);
-static ssize_t dev_write(struct file *, const char *, size_t, loff_t *);
-
-
-static struct file_operations fops =
+ 
+static char mainBuffer[100];
+static int currentPos = 0, timesOpened = 0;
+ 
+static int dev_open(struct inode*, struct file*);
+static int dev_release(struct inode*, struct file*);
+static ssize_t dev_read(struct file*, char*, size_t, loff_t*);
+static ssize_t dev_write(struct file*, const char*, size_t, loff_t*);
+ 
+static struct file_operations fileOps =
 {
-   .open = dev_open,
-   .read = dev_read,
-   .write = dev_write,
-   .release = dev_release,
+    .read = dev_read,
+    .open = dev_open,
+    .write = dev_write,
+    .release = dev_release,
 };
-
-//Initialize the Module
-int init_module(void){
-   printk(KERN_INFO "Initializing Driver Module\n");
-
-   // Try to dynamically allocate a major number for the device -- more difficult but worth it
-   majorNumber = register_chrdev(0, DEVICE_NAME, &fops);
-   if (majorNumber<0){
-      printk(KERN_ALERT "Failed to register...\n");
-      return majorNumber;
-   }
-
-   printk(KERN_INFO "Device class created correctly\n"); // Made it! device was initialized
-   return 0;
+ 
+int init_module(void)
+{
+    int num = register_chrdev(42,"NSACharBuffer", &fileOps);
+ 
+    if(num < 0)
+        printk(KERN_INFO "Device failed to register :(\n");
+    else
+        printk(KERN_INFO "Device registered successfully\n");
+ 
+    return num;
 }
-
-//Clean up the module
-void cleanup_module(void){
-
-   unregister_chrdev(majorNumber, DEVICE_NAME);    // unregister the major number
-   printk(KERN_INFO "Goodbye from the LKM!\n");
+ 
+void cleanup_module(void)
+{
+    unregister_chrdev(42,"NSACharBuffer");
+ 
+    printk(KERN_INFO "Device un-registered successfully\n");
 }
-
-// Open the device
-static int dev_open(struct inode *inodep, struct file *filep){
-   numberOpens++;
-   printk(KERN_INFO "This Device has been opened %d time(s)\n", numberOpens);
-   return 0;
+ 
+static int dev_open(struct inode *inod, struct file *fil)
+{
+    printk(KERN_ALERT "Device has been opened %d times\n", ++timesOpened);
+    return 0;
 }
-
-/** @brief This function is called whenever device is being read from user space i.e. data is
- *  being sent from the device to the user. In this case is uses the copy_to_user() function to
- *  send the buffer string to the user and captures any errors.
- *  @param filep A pointer to a file object (defined in linux/fs.h)
- *  @param buffer The pointer to the buffer to which this function writes the data
- *  @param len The length of the b
- *  @param offset The offset if required
- */
+ 
 static ssize_t dev_read(struct file *filp, char* buff, size_t len, loff_t* off)
 {
     unsigned short i = 0, bytesRead = 0;
    
-    printk(KERN_INFO "Device being read now...\n");
-
     while(i < currentPos)
     {
         // WARNING: Possible overflow on buff++ here
+        printk(KERN_INFO "Read %c from the buffer.\n", mainBuffer[i]);
         put_user(mainBuffer[i], buff++);
         bytesRead++;
         i++;
@@ -89,18 +70,17 @@ static ssize_t dev_read(struct file *filp, char* buff, size_t len, loff_t* off)
 static ssize_t dev_write(struct file *filp, const char* buff, size_t len, loff_t* off)
 {
     unsigned short bytesWritten = 0, i = 0;
-   
-   printk(KERN_INFO "Device being written to now...\n");
-
-    for(i = 0; i < len; i++)
+ 
+    for(i = 0; i < len-1; i++)
     {
-        if(currentPos == 1024)
+        if(currentPos == 100)
         {
-            printk(KERN_INFO "Buffer full, %d bytes were written.", bytesWritten);
+            printk(KERN_INFO "Buffer full, %d bytes were written.\n", bytesWritten);
             break;
         }
         else
         {
+            printk(KERN_INFO "Inserted %c into the buffer.\n", buff[i]);
             mainBuffer[currentPos] = buff[i];
             currentPos++;
             bytesWritten++;
@@ -109,10 +89,9 @@ static ssize_t dev_write(struct file *filp, const char* buff, size_t len, loff_t
  
     return bytesWritten;
 }
-
-
-static int dev_release(struct inode *inodep, struct file *filep){
-   printk(KERN_INFO "Device successfully closed\n");
-   return 0;
+ 
+static int dev_release(struct inode* inod, struct file* fil)
+{
+    printk(KERN_INFO "NSACharBuffer Device was closed... maybe...\n");
+    return 0;
 }
-

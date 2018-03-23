@@ -12,7 +12,7 @@ Will output the same string by writing it to the Driver and Reading it back.
 #include <string.h>
 #include <unistd.h>
 
-#define BUFFER_SIZE 1024;
+#define BUFFER_SIZE 1024
 static char inputBuffer[BUFFER_SIZE];
 static char receiveBuffer[BUFFER_SIZE]; 
 
