@@ -16,26 +16,6 @@ Will output the same string by writing it to the Driver and Reading it back.
 static char inputBuffer[BUFFER_SIZE];
 static char receiveBuffer[BUFFER_SIZE]; 
 
-/*void readAndRemove (char inputBuffer)
-{
-	int i = 0;
-	
-	//empty input condition
-	if(inputBuffer[0] == NULL)
-	{
-		printf("No Input Found!\n");
-	}
-	
-	//until it hits a null terminator in the string, it prints out each character and turns it into a null terminator
-	while()
-	{
-		printf("%c", inputBuffer[i]);
-		
-		inputBuffer[i] == NULL;
-		
-		i++;
-	}
-}*/
 
 int main(int argc, char *argv[])
 {
@@ -43,7 +23,7 @@ int main(int argc, char *argv[])
 	char characterbuffer[2000];
 	//if the user wants this to happen
 	//readAndRemove(inputBuffer);
-	driver = open("/dev/kernelModule", 0_RDWR); 
+	driver = open("/dev/driver", 0_RDWR); 
 	if(driver < 0){
 		printf("Driver not able to be opened");
 		return 0;
