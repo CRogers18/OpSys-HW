@@ -51,9 +51,11 @@ static int dev_open(struct inode *inod, struct file *fil)
  
 static ssize_t dev_read(struct file *filp, char* buff, size_t len, loff_t* off)
 {
-    unsigned short i = 0, bytesRead = 0;
-   
-    while(i < currentPos)
+   unsigned short i = 0, bytesRead = 0;
+
+   printk(KERN_INFO "Reading from device.....\n");
+   // Needs to handle if len is greater than or less than current position
+   while(i < currentPos)
     {
         // WARNING: Possible overflow on buff++ here
         printk(KERN_INFO "Read %c from the buffer.\n", mainBuffer[i]);
@@ -61,22 +63,30 @@ static ssize_t dev_read(struct file *filp, char* buff, size_t len, loff_t* off)
         bytesRead++;
         i++;
     }
+
+   if(len > currentPos){
+      printk(KERN_ALERT "Not enough data to be read. Only %d bytes available to be read.\n", currentPos);
+      currentPos = 0;
+      return len;
+   }
+    
+   currentPos = 0;
  
-    currentPos = 0;
- 
-    return bytesRead;
+   return bytesRead;
 }
  
 static ssize_t dev_write(struct file *filp, const char* buff, size_t len, loff_t* off)
 {
     unsigned short bytesWritten = 0, i = 0;
- 
-    for(i = 0; i < len-1; i++)
+   
+    printk(KERN_INFO "Writting to the device...\n");
+
+   for(i = 0; i < len-1; i++)
     {
         if(currentPos == 100)
         {
             printk(KERN_INFO "Buffer full, %d bytes were written.\n", bytesWritten);
-            break;
+            return len;
         }
         else
         {
