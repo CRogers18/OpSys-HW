@@ -5,49 +5,59 @@
 #include <linux/fs.h>
 #include <asm/uaccess.h>
 
-#include "buffer.h"
  
 MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("Character Buffer Driver, totally not a virus bro");
+MODULE_DESCRIPTION("Character Buffer Output Driver, totally not a virus bro");
 MODULE_AUTHOR("Group 66");
 
-static int currentPos = 0, timesOpened = 0;
+static int timesOpened = 0;
+extern int currentPos;
+extern char mainBuffer[1024]; 
  
 static int dev_open(struct inode*, struct file*);
 static int dev_release(struct inode*, struct file*);
 static ssize_t dev_read(struct file*, char*, size_t, loff_t*);
-//static ssize_t dev_write(struct file*, const char*, size_t, loff_t*);
- 
+extern struct mutex buffer_mutex; 
+
 static struct file_operations fileOps =
 {
     .read = dev_read,
     .open = dev_open,
-//    .write = dev_write,
     .release = dev_release,
 };
  
 int init_module(void)
 {
-    int num = register_chrdev(42,"NSACharBuffer", &fileOps);
+    int num = register_chrdev(43,"CharBufferOutput", &fileOps);
  
     if(num < 0)
-        printk(KERN_INFO "[ERROR] Device failed to register :(\n");
+        printk(KERN_INFO "[ERROR] Output Device failed to register :(\n");
     else
-        printk(KERN_INFO "[INIT] Device registered successfully\n");
- 
+        printk(KERN_INFO "[INIT] Output Device registered successfully\n");
+
+    mutex_init(&buffer_mutex);
+
     return num;
 }
  
 void cleanup_module(void)
 {
-    unregister_chrdev(42,"NSACharBuffer");
+    unregister_chrdev(43,"CharBufferOutput");
  
-    printk(KERN_INFO "[CLEANUP] Device un-registered successfully\n");
+    printk(KERN_INFO "[CLEANUP] Output Device un-registered successfully\n");
+
+    mutex_destroy(&buffer_mutex);
 }
  
 static int dev_open(struct inode *inod, struct file *fil)
 {
-    printk(KERN_ALERT "Device has been opened %d times\n", ++timesOpened);
+    if(!mutex_trylock(&buffer_mutex))
+    {
+        printk(KERN_ALERT "Output Device is in use by another process!");
+        return 0;
+    }
+
+    printk(KERN_ALERT "Output Device has been opened %d times\n", ++timesOpened);
     return 0;
 }
  
@@ -57,7 +67,7 @@ static ssize_t dev_read(struct file *filp, char* buff, size_t len, loff_t* off)
    
     if(currentPos == 0)
     {
-        printk(KERN_INFO "[ERROR] Tried to read from an empty buffer\n");
+        printk(KERN_INFO "[ERROR] Output Tried to read from an empty buffer\n");
         return 0;
     }
  
@@ -85,6 +95,8 @@ static ssize_t dev_read(struct file *filp, char* buff, size_t len, loff_t* off)
  
 static int dev_release(struct inode* inod, struct file* fil)
 {
-    printk(KERN_INFO "[RELEASE] NSACharBuffer Device was closed... maybe...\n");
+    mutex_unlock(&buffer_mutex);
+
+    printk(KERN_INFO "[RELEASE] CharBufferOutput Device was closed... maybe...\n");
     return 0;
 }
