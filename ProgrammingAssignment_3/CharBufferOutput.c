@@ -4,6 +4,8 @@
 #include <linux/string.h>
 #include <linux/fs.h>
 #include <asm/uaccess.h>
+
+#include "buffer.h"
  
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Character Buffer Driver, totally not a virus bro");
@@ -14,13 +16,13 @@ static int currentPos = 0, timesOpened = 0;
 static int dev_open(struct inode*, struct file*);
 static int dev_release(struct inode*, struct file*);
 static ssize_t dev_read(struct file*, char*, size_t, loff_t*);
-static ssize_t dev_write(struct file*, const char*, size_t, loff_t*);
+//static ssize_t dev_write(struct file*, const char*, size_t, loff_t*);
  
 static struct file_operations fileOps =
 {
     .read = dev_read,
     .open = dev_open,
-    .write = dev_write,
+//    .write = dev_write,
     .release = dev_release,
 };
  

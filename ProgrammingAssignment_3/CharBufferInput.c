@@ -4,39 +4,40 @@
 #include <linux/string.h>
 #include <linux/fs.h>
 #include <asm/uaccess.h>
+
+#include "buffer.h"
  
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Character Buffer Driver, totally not a virus bro");
 MODULE_AUTHOR("Group 66");
 
 //extern variables need to be initialized in order to compile
-extern static char mainBuffer[1024] = {''};
 static int currentPos = 0, timesOpened = 0;
  
 static int dev_open(struct inode*, struct file*);
 static int dev_release(struct inode*, struct file*);
-static ssize_t dev_read(struct file*, char*, size_t, loff_t*);
+//static ssize_t dev_read(struct file*, char*, size_t, loff_t*);
 static ssize_t dev_write(struct file*, const char*, size_t, loff_t*);
 static DEFINE_MUTEX(input_mutex);
  
 static struct file_operations fileOps =
 {
-    .read = dev_read,
+//    .read = dev_read,
     .open = dev_open,
     .write = dev_write,
     .release = dev_release,
 };
  
 int init_module(void)
-{
-	mutex_init(&input_mutex);
-	
+{	
     int num = register_chrdev(42,"NSACharBuffer", &fileOps);
  
     if(num < 0)
         printk(KERN_INFO "[ERROR] Device failed to register :(\n");
     else
         printk(KERN_INFO "[INIT] Device registered successfully\n");
+
+    mutex_init(&input_mutex);
  
     return num;
 }
