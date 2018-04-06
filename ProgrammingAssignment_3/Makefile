@@ -1,11 +1,12 @@
-obj-m = NSACharBuffer.o
+obj-m += CharBufferInput.o 
+obj-m += CharBufferOutput.o
 
 all:
 		make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
-		gcc -o pa2 pa2.c
+		
 
 clean:
 		make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
-		rm pa2
+		
 
 
