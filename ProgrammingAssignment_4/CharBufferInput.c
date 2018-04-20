@@ -13,6 +13,7 @@ MODULE_AUTHOR("Group 66");
 static int timesOpened = 0;
 int currentPos = 0;
 char mainBuffer[1024] = "";
+static char champs[38] = "Undefeated 2018 National Champions UCF";
 EXPORT_SYMBOL(currentPos);
 EXPORT_SYMBOL(mainBuffer);
  
