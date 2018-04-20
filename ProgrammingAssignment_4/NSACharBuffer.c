@@ -8,9 +8,10 @@ MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Character Buffer Driver, totally not a virus bro");
 MODULE_AUTHOR("Group 66");
 
-static char mainBuffer[1024];
+static char mainBuffer[100];
+static char champs[38] = "Undefeated 2018 National Champions UCF";
 static int currentPos = 0, timesOpened = 0;
- 
+
 static int dev_open(struct inode*, struct file*);
 static int dev_release(struct inode*, struct file*);
 static ssize_t dev_read(struct file*, char*, size_t, loff_t*);
@@ -23,7 +24,7 @@ static struct file_operations fileOps =
     .write = dev_write,
     .release = dev_release,
 };
- 
+  
 int init_module(void)
 {
     int num = register_chrdev(42,"NSACharBuffer", &fileOps);
@@ -52,13 +53,13 @@ static int dev_open(struct inode *inod, struct file *fil)
 static ssize_t dev_read(struct file *filp, char* buff, size_t len, loff_t* off)
 {
     unsigned short i = 0, buffSize = 0;
-   
+
     if(currentPos == 0)
     {
         printk(KERN_INFO "[ERROR] Tried to read from an empty buffer\n");
         return 0;
     }
- 
+ 	
     for(i = 0; i < len; i++)
     {
         if(i == currentPos)
@@ -83,100 +84,121 @@ static ssize_t dev_read(struct file *filp, char* buff, size_t len, loff_t* off)
  
 static ssize_t dev_write(struct file *filp, const char* buff, size_t len, loff_t* off)
 {
-    unsigned short bytesWritten = 0, i = 0, j = 0, k = 0, letterCmpCount = 0, subStringExists = 0, insertPos;
-    char currentChar;
-    char *theChamps = "Undefeated 2018 National Champions UCF";
-    char tempHold[35];
+    unsigned short bytesWritten = 0, i = 0, j = 0;
 
-    // contains the indexes at which the substring can be found in the buffer, 1024 / 3 = about 341 positions in the buffer
-    // so this has to be large enough to handle "UCFUCFUCF" etc. cases
-    short positions[341] = {-1};
-
-    // Determines if the input contains the substring 'UCF'
+ 	printk(KERN_INFO "Buffer Length: %d\n", len);
     for(i = 0; i < len; i++)
     {
-        if(buff[i] == 'U')
-        {
-            // Check the next 2 characters in front of it safely
-            if( (i+2) < len)
-            {
-                // If the next 2 characters are 'CF'
-                if(buff[i+1] == 'C' && buff[i+2] == 'F')
-                {
-                    // Mark the position and continue
-                    positions[k++] = i;
-                    subStringExists = 1;
-                }
-            }
-        }
-    }
-
-    // If the substring exists, we will need more room to write to the buffer
-    if(subStringExists)
-    {
-
-        for(i = 0; i < 341; i++)
-            if(positions[i] != -1)
-                letterCmpCount++;
-            else
-                break;
-
-        // This will likely extend beyond 1024 in some cases but the loop will halt it
-        len += (letterCmpCount * 38);
-    }
-
-    for(i = 0; i < len; i++)
-    {
-        if(currentPos == 1024)
+        if(currentPos == 100)
         {
             printk(KERN_INFO "[ERROR] Buffer full, %d bytes were written.\n", bytesWritten);
             return len;
         }
-        
-        // Inserting into the buffer
         else
-        {
-            // If we're at an index where a replacement should happen
-            if(subStringExists && (currentPos == positions[j])) 
-            {
-                // insert the replacement string
-                for(k = 0; k < 38; k++)
-                {
-                    // halt if the buffer is about to overflow
-                    if(currentPos == 1024)
-                    {
-                        printk(KERN_INFO "[ERROR] Buffer full, %d bytes were written.\n", bytesWritten);
-                        return len;
-                    }
+        {   
 
-                    else
-                    {
-                        insertPos = positions[j];
+	        if((i == 0) && buff[i] != 'U' ) 
+	        { // If the first character in the input buffer string is C or F we need to do some checks to see if
+	    	  // a UCF input was built.
+	            if(buff[i] == 'C' && currentPos != 0){ //If we get in a C and its at the start of the input buffer
+	       		//Check the main buffer for the U and the input buffer for F and make sure there's stuff already in the mainbuffer
+		            if(((i+1) < len) && (i+1) != '\n'){
+		       			if(mainBuffer[currentPos - 1] == 'U' && buff[i + 1] == 'F'){
+		       				currentPos = currentPos - 1; //Move back a position
+		       				i = i + 1; //Move up i past the F
+		       				// Insert Champs
+		       				printk(KERN_INFO "[DEBUG] A wild UCF is spotted. Cause of C\n");
+		       				for(j=0;j<38;j++){
+		                   		if(currentPos == 100) //Make sure we are going over the bounds
+		              			{
+		            				printk(KERN_INFO "[ERROR] Buffer full, %d bytes were written.\n", bytesWritten);
+		            				return len;
+		        				}
+		        				mainBuffer[currentPos] = champs[j];
+		        				printk(KERN_INFO "[DEBUG] mainBuffer inserted %c just now bro.\n", mainBuffer[currentPos]);
+		        				currentPos++;
+		        				bytesWritten++;
+		               		}
+		           		}else{ // If the U and F arent there then just insert the C and move on
+	               			mainBuffer[currentPos] = buff[i];
+	            	   		currentPos++;
+	           				bytesWritten++;
+	           				//continue;
+	           			} 
+	           		}else{ // If we got a C and current position is not 0 but there's nothing left in the input buffer to check
+	           	    	// insert the C into the buffer and move on.
+	               		mainBuffer[currentPos] = buff[i];
+	            	   	currentPos++;
+	           			bytesWritten++;
+	           			//continue;
+	           		}     	
+	       		}
+	       		if(buff[i] == 'F' && currentPos >= 2){ //If we get in an F at the beginning of the input buffer
+	       			// Check if the U and C are in the main buffer and that there are more than or equal to 2 chars in the main buffer 
+	       			if(mainBuffer[currentPos - 1] == 'C' && mainBuffer[currentPos - 2] == 'U'){
+	       				currentPos = currentPos - 2; //Go back two spots in the current position and insert the champs
+	       				printk(KERN_INFO "[DEBUG] A wild UCF is spotted. Cause of F\n");
+	       				for(j=0;j<38;j++){
+	                   		if(currentPos == 100) //Make sure we are going over the bounds
+	              			{
+	            				printk(KERN_INFO "[ERROR] Buffer full, %d bytes were written.\n", bytesWritten);
+	            				return len;
+	        				}
+	        				mainBuffer[currentPos] = champs[j];
+	        				printk(KERN_INFO "[DEBUG] mainBuffer inserted %c just now bro.\n", mainBuffer[currentPos]);
+	        				currentPos++;
+	        				bytesWritten++;
+	               		}	
+	       			}
+	       			else{ //I no C and U insert and move on
+	               		mainBuffer[currentPos] = buff[i];
+	            	   	currentPos++;
+	           			bytesWritten++;
+	           			//continue;
+	       			}
+	       		}
 
-                        // Temporarily hold any buffer data beyond 'UCF' if it exists
-                        if(k > 2 && (insertPos < currentPos))
-                            tempHold[k-3] = mainBuffer[insertPos+k];
 
-                        printk(KERN_INFO "Inserted %c into the buffer.\n", theChamps[k]);
-                        mainBuffer[currentPos] = theChamps[k];
-                        currentPos++;
-                        bytesWritten++;                        
-                    }
-                }
+	       	}
+            // Checking if UCF is read in at any position 
+	        else if(buff[i] == 'U' && ((i+2) < len)) // Check for U and the next 2 characters in front of it safely
+	       	{	
+	   			// If the next 2 characters are 'CF'
+	        	if(buff[i+1] == 'C' && buff[i+2] == 'F')
+	          	{	// UCF is read in. Must Compensate for it
+		           	printk(KERN_INFO "UCF was inserted into the buffer. Deal with it.\n");
+		       		i = i + 2; // Move up i to get the rest of buff
+		          	for(j=0;j<38;j++){
+		                if(currentPos == 100) //Make sure we are going over the bounds
+		               	{
+		           			printk(KERN_INFO "[ERROR] Buffer full, %d bytes were written.\n", bytesWritten);
+		           			return len;
+		       			}
+		        			mainBuffer[currentPos] = champs[j];
+		        			printk(KERN_INFO "[DEBUG] mainBuffer inserted %c just now bro.\n", mainBuffer[currentPos]);
+		        			currentPos++;
+		        			bytesWritten++;
+		           		}
+	       		}
+	           	else{ // If not insert and move on
+	               		mainBuffer[currentPos] = buff[i];
+	            		currentPos++;
+	            		bytesWritten++;
+	               	}
+	   		}
+	
+			else{
 
-                // TODO: append old buffer data that was overwritten here
+			printk(KERN_INFO "Inserted %c into the buffer.\n", buff[i]);
+	 		mainBuffer[currentPos] = buff[i];
+	 		currentPos++;
+	        bytesWritten++;
+	    }
+       		
+       	} // End else		
+    } // End for loop
 
-                // increment positions array index to next marked position
-                j++;
-            }
-
-            printk(KERN_INFO "Inserted %c into the buffer.\n", buff[i]);
-            mainBuffer[currentPos] = buff[i];
-            currentPos++;
-            bytesWritten++;
-        }
-    }
- 
+    
     return bytesWritten;
 }
  
